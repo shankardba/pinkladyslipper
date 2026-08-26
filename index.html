@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pink Lady Slipper</title>
+  <meta name="description" content="Official website of Pink Lady Slipper — music, tour dates, and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Bungee&family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="site-header">
+    <nav class="navbar">
+      <a href="#home" class="logo-group">
+        <svg class="badge-mark badge-mark-small" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <path id="arcTopSmall" d="M 28,100 A 72,72 0 0 1 172,100" />
+            <path id="arcBottomSmall" d="M 28,100 A 72,72 0 0 0 172,100" />
+          </defs>
+          <circle cx="100" cy="100" r="97" class="badge-ring" />
+          <g class="badge-mark-flower">
+            <path class="petal petal-blue" d="M100,58 C120,70 120,110 100,124 C80,110 80,70 100,58 Z" transform="rotate(-26 100 108)" />
+            <path class="petal petal-purple" d="M100,52 C122,66 122,114 100,130 C78,114 78,66 100,52 Z" />
+            <path class="petal petal-blue" d="M100,58 C120,70 120,110 100,124 C80,110 80,70 100,58 Z" transform="rotate(26 100 108)" />
+            <path class="badge-leaf" d="M100,128 C114,134 114,150 100,156 C86,150 86,134 100,128 Z" />
+          </g>
+          <text class="badge-text">
+            <textPath href="#arcTopSmall" startOffset="50%" text-anchor="middle">PINK LADY</textPath>
+          </text>
+          <text class="badge-text">
+            <textPath href="#arcBottomSmall" startOffset="50%" text-anchor="middle">SLIPPER</textPath>
+          </text>
+        </svg>
+        <span class="logo">Pink Lady Slipper</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#music">Music</a></li>
+        <li><a href="#tour">Tour</a></li>
+        <li><a href="#gallery">Gallery</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section id="home" class="hero">
+    <div class="hero-content">
+      <h1>Pink Lady Slipper</h1>
+      <p class="tagline">New music out now — turn it up.</p>
+      <div class="hero-buttons">
+        <a href="#music" class="btn btn-primary">Listen Now</a>
+        <a href="#tour" class="btn btn-outline">Tour Dates</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="section">
+    <div class="container">
+      <h2 class="section-title">About</h2>
+      <div class="about-grid">
+        <div class="about-photo">
+          <!-- TODO: replace with a real band photo, e.g. images/band-photo.jpg -->
+          <div class="photo-placeholder">Band Photo</div>
+        </div>
+        <div class="about-text">
+          <p>
+            Pink Lady Slipper is [a solo artist / a band] making [genre] music that blends
+            [influence one] with [influence two]. Formed in [year/city], the project has grown
+            into [a few sentences about the story, sound, and what makes the music distinct].
+          </p>
+          <p>
+            Replace this placeholder text with your real bio — the story, the sound, and what
+            fans should know before hitting play.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MUSIC -->
+  <section id="music" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">Music</h2>
+      <div class="music-grid">
+        <div class="release-card">
+          <div class="photo-placeholder square">Cover Art</div>
+          <h3>Release Title</h3>
+          <p class="release-meta">Single &middot; 2026</p>
+          <div class="release-links">
+            <a href="#" class="btn btn-small">Spotify</a>
+            <a href="#" class="btn btn-small">Apple Music</a>
+          </div>
+        </div>
+        <div class="release-card">
+          <div class="photo-placeholder square">Cover Art</div>
+          <h3>Release Title</h3>
+          <p class="release-meta">EP &middot; 2025</p>
+          <div class="release-links">
+            <a href="#" class="btn btn-small">Spotify</a>
+            <a href="#" class="btn btn-small">Apple Music</a>
+          </div>
+        </div>
+        <div class="release-card">
+          <div class="photo-placeholder square">Cover Art</div>
+          <h3>Release Title</h3>
+          <p class="release-meta">Album &middot; 2024</p>
+          <div class="release-links">
+            <a href="#" class="btn btn-small">Spotify</a>
+            <a href="#" class="btn btn-small">Apple Music</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TOUR -->
+  <section id="tour" class="section">
+    <div class="container">
+      <h2 class="section-title">Tour Dates</h2>
+      <ul class="tour-list">
+        <li class="tour-date">
+          <span class="date">SEP 12, 2026</span>
+          <span class="venue">The Fillmore &mdash; San Francisco, CA</span>
+          <a href="#" class="btn btn-small">Tickets</a>
+        </li>
+        <li class="tour-date">
+          <span class="date">SEP 20, 2026</span>
+          <span class="venue">Bowery Ballroom &mdash; New York, NY</span>
+          <a href="#" class="btn btn-small">Tickets</a>
+        </li>
+        <li class="tour-date">
+          <span class="date">OCT 03, 2026</span>
+          <span class="venue">The Echo &mdash; Los Angeles, CA</span>
+          <a href="#" class="btn btn-small">Tickets</a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section id="gallery" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">Gallery</h2>
+      <p class="section-subtitle">Drop photos into the <code>images/</code> folder and swap them in here.</p>
+      <div class="gallery-grid">
+        <div class="photo-placeholder gallery-item">Photo 1</div>
+        <div class="photo-placeholder gallery-item">Photo 2</div>
+        <div class="photo-placeholder gallery-item">Photo 3</div>
+        <div class="photo-placeholder gallery-item">Photo 4</div>
+        <div class="photo-placeholder gallery-item">Photo 5</div>
+        <div class="photo-placeholder gallery-item">Photo 6</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="section">
+    <div class="container">
+      <h2 class="section-title">Contact</h2>
+      <p class="section-subtitle">Booking &amp; press inquiries — get in touch.</p>
+      <div class="contact-grid">
+        <a href="mailto:booking@pinkladyslipper.com" class="btn btn-primary">booking@pinkladyslipper.com</a>
+        <div class="social-links">
+          <a href="#" aria-label="Instagram">Instagram</a>
+          <a href="#" aria-label="TikTok">TikTok</a>
+          <a href="#" aria-label="YouTube">YouTube</a>
+          <a href="#" aria-label="Spotify">Spotify</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <svg class="badge-mark badge-mark-large" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <path id="arcTopLarge" d="M 28,100 A 72,72 0 0 1 172,100" />
+        <path id="arcBottomLarge" d="M 28,100 A 72,72 0 0 0 172,100" />
+      </defs>
+      <circle cx="100" cy="100" r="97" class="badge-ring" />
+      <g class="badge-mark-flower">
+        <path class="petal petal-blue" d="M100,58 C120,70 120,110 100,124 C80,110 80,70 100,58 Z" transform="rotate(-26 100 108)" />
+        <path class="petal petal-purple" d="M100,52 C122,66 122,114 100,130 C78,114 78,66 100,52 Z" />
+        <path class="petal petal-blue" d="M100,58 C120,70 120,110 100,124 C80,110 80,70 100,58 Z" transform="rotate(26 100 108)" />
+        <path class="badge-leaf" d="M100,128 C114,134 114,150 100,156 C86,150 86,134 100,128 Z" />
+      </g>
+      <text class="badge-text">
+        <textPath href="#arcTopLarge" startOffset="50%" text-anchor="middle">PINK LADY</textPath>
+      </text>
+      <text class="badge-text">
+        <textPath href="#arcBottomLarge" startOffset="50%" text-anchor="middle">SLIPPER</textPath>
+      </text>
+    </svg>
+    <p>&copy; <span id="year"></span> Pink Lady Slipper. All rights reserved.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
