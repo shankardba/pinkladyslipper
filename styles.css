@@ -334,6 +334,14 @@ a {
   aspect-ratio: 1 / 1;
 }
 
+.about-photo-img {
+  width: 100%;
+  border-radius: 10px;
+  border: 2px solid var(--color-maroon);
+  object-fit: cover;
+  box-shadow: 0 0 24px rgba(155, 77, 255, 0.25);
+}
+
 /* Music */
 .music-grid {
   display: grid;
