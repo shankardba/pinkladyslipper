@@ -134,6 +134,11 @@ a {
 }
 
 /* Badge mark */
+.badge-mark {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .badge-mark-small {
   width: 40px;
   height: 40px;
@@ -145,36 +150,7 @@ a {
   height: 120px;
   margin: 0 auto 16px;
   display: block;
-}
-
-.badge-ring {
-  fill: var(--color-badge-bg);
-  stroke: var(--color-neon-purple);
-  stroke-width: 2;
-}
-
-.badge-mark-flower .petal {
-  filter: drop-shadow(0 0 3px rgba(91, 92, 255, 0.7));
-}
-
-.petal-blue {
-  fill: var(--color-neon-blue);
-}
-
-.petal-purple {
-  fill: var(--color-neon-purple);
-}
-
-.badge-leaf {
-  fill: var(--color-neon-green);
-  filter: drop-shadow(0 0 3px rgba(61, 220, 132, 0.7));
-}
-
-.badge-text {
-  font-family: var(--font-poster);
-  font-size: 21px;
-  fill: var(--color-primary);
-  letter-spacing: 2px;
+  box-shadow: 0 0 24px rgba(91, 92, 255, 0.35);
 }
 
 .nav-links {
