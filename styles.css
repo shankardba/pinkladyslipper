@@ -71,6 +71,8 @@ a {
   background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
   color: #10061a;
   box-shadow: 0 8px 24px rgba(246, 2, 188, 0.35);
+  border: none;
+  padding: 16px 30px;
 }
 
 .btn-outline {
@@ -84,10 +86,11 @@ a {
 }
 
 .btn-small {
-  padding: 8px 18px;
+  padding: 10px 20px;
   font-size: 0.85rem;
   background: var(--color-accent);
   color: var(--color-cream);
+  border: none;
 }
 
 .btn-small:hover {
