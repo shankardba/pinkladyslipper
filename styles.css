@@ -377,14 +377,14 @@ a {
   color: var(--color-text);
 }
 
-/* Gallery */
-.gallery-grid {
+/* Media */
+.media-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
 }
 
-.gallery-item {
+.media-item {
   min-height: 220px;
   border-radius: 12px;
 }
@@ -411,6 +411,78 @@ a {
 
 .social-links a:hover {
   color: var(--color-primary);
+}
+
+/* Page header (secondary pages) */
+.page-header {
+  padding: 140px 0 60px;
+  text-align: center;
+}
+
+.page-title {
+  font-family: var(--font-poster);
+  font-size: clamp(2rem, 5vw, 3rem);
+  color: var(--color-secondary);
+  letter-spacing: 0.5px;
+}
+
+.page-subtitle {
+  margin-top: 12px;
+  color: var(--color-text-muted);
+}
+
+/* Members */
+.member-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 40px;
+}
+
+.member-card h3 {
+  margin-top: 18px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.member-role {
+  color: var(--color-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 6px 0 12px;
+}
+
+.member-bio {
+  color: var(--color-text-muted);
+}
+
+/* Lyrics */
+.lyrics-entry {
+  background: var(--color-bg-alt);
+  border: 1px solid rgba(2, 211, 255, 0.15);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+
+.lyrics-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--color-secondary);
+  cursor: pointer;
+}
+
+.lyrics-body {
+  margin-top: 16px;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+
+/* Nav active state */
+.nav-links a.active {
+  color: var(--color-secondary);
 }
 
 /* Footer */

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lyrics — Pink Lady Slipper</title>
+  <meta name="description" content="Song lyrics from Pink Lady Slipper." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Bungee&family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="site-header">
+    <nav class="navbar">
+      <a href="index.html#home" class="logo-group">
+        <img src="images/logo.webp" alt="Pink Lady Slipper" class="badge-mark badge-mark-small" />
+        <span class="logo">Pink Lady Slipper</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html#home">Home</a></li>
+        <li><a href="index.html#about">About</a></li>
+        <li><a href="index.html#music">Music</a></li>
+        <li><a href="index.html#tour">Tour</a></li>
+        <li><a href="index.html#media">Media</a></li>
+        <li><a href="members.html">Members</a></li>
+        <li><a href="lyrics.html" class="active">Lyrics</a></li>
+        <li><a href="index.html#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- PAGE HEADER -->
+  <section class="page-header">
+    <div class="container">
+      <h1 class="page-title">Lyrics</h1>
+      <p class="page-subtitle">Words from the songs.</p>
+    </div>
+  </section>
+
+  <!-- LYRICS -->
+  <section class="section">
+    <div class="container">
+      <!--
+        TODO: Add your own songs below. Each .lyrics-entry is one song —
+        replace the placeholder title and paste your lyrics into the
+        .lyrics-body <pre> block, keeping line breaks as-is.
+      -->
+      <details class="lyrics-entry" open>
+        <summary class="lyrics-title">[Song Title One]</summary>
+        <pre class="lyrics-body">[Paste lyrics here]</pre>
+      </details>
+
+      <details class="lyrics-entry">
+        <summary class="lyrics-title">[Song Title Two]</summary>
+        <pre class="lyrics-body">[Paste lyrics here]</pre>
+      </details>
+
+      <details class="lyrics-entry">
+        <summary class="lyrics-title">[Song Title Three]</summary>
+        <pre class="lyrics-body">[Paste lyrics here]</pre>
+      </details>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <img src="images/logo.webp" alt="Pink Lady Slipper" class="badge-mark badge-mark-large" />
+    <p>&copy; <span id="year"></span> Pink Lady Slipper. All rights reserved.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
