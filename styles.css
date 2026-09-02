@@ -438,6 +438,15 @@ a {
   gap: 40px;
 }
 
+.member-photo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid var(--color-maroon);
+  box-shadow: 0 0 24px rgba(123, 47, 252, 0.3);
+}
+
 .member-card h3 {
   margin-top: 18px;
   font-family: var(--font-display);
