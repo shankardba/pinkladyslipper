@@ -404,13 +404,18 @@ a {
 }
 
 .social-links a {
+  display: inline-flex;
   color: var(--color-text-muted);
-  font-weight: 600;
   transition: color 0.2s ease;
 }
 
 .social-links a:hover {
   color: var(--color-primary);
+}
+
+.social-links svg {
+  width: 26px;
+  height: 26px;
 }
 
 /* Page header (secondary pages) */
