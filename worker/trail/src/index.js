@@ -18,6 +18,8 @@
 //           PUBLIC_BASE (optional; origin the admin page puts in QR codes)
 // Secrets:  ADMIN_PASSWORD (required for /admin)
 
+import { LOGO_LINE_DATA_URI } from './logo.js';
+
 const PREFIX = '/api/trail';
 const COOKIE = 'pls_trail';
 const TOKEN_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'; // no look-alikes (i, l, o, 0, 1)
@@ -328,6 +330,7 @@ function adminPage(env, url, spots, visitors) {
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px}
     .card{background:#f5f0ff;color:#10061a;border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
     .qr{background:#fff;padding:8px;border-radius:8px;line-height:0}
+    .qr img{width:200px;height:200px;display:block}
     .meta{font-size:.8rem;color:#5a4a70}
     .link{font-size:.68rem;color:#5a4a70;word-break:break-all}
     @media print{body{background:#fff;color:#000}.bar,.noprint,.top button{display:none}.grid{gap:28px}.card{border:1px solid #ccc;break-inside:avoid}}
@@ -358,21 +361,69 @@ function adminPage(env, url, spots, visitors) {
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <script>
+    // Each code is drawn at a large whole-number module size, so square edges
+    // stay sharp and the logo's round cut-out is anti-aliased. The <img> shows
+    // it at card size; right-click > Save Image gives the full-resolution PNG.
+    const LOGO_SRC = ${JSON.stringify(LOGO_LINE_DATA_URI)};
     const baseInput = document.getElementById('base');
-    function render() {
+    const QUIET = 4;       // quiet-zone width, in modules
+    const LOGO_FRAC = 0.28; // logo diameter as a share of the whole image
+
+    function drawQr(link, logo) {
+      const qr = qrcode(0, 'H'); // highest error correction so the logo can cover the middle
+      qr.addData(link);
+      qr.make();
+      const n = qr.getModuleCount();
+      const mod = Math.ceil(1600 / (n + QUIET * 2));
+      const size = (n + QUIET * 2) * mod;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#000000';
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          if (qr.isDark(r, c)) ctx.fillRect((c + QUIET) * mod, (r + QUIET) * mod, mod, mod);
+        }
+      }
+      const d = Math.round(size * LOGO_FRAC);
+      const pad = Math.round(size * 0.016);
+      const mid = size / 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(mid, mid, d / 2 + pad, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(mid, mid, d / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(logo, mid - d / 2, mid - d / 2, d, d);
+      ctx.restore();
+      const img = new Image();
+      img.alt = 'QR code';
+      img.src = canvas.toDataURL('image/png');
+      return img;
+    }
+
+    function render(logo) {
       const base = baseInput.value.trim().replace(/\\/+$/, '');
       document.querySelectorAll('.card[data-token]').forEach((card) => {
         const link = base + '${PREFIX}/s/' + card.dataset.token;
         const box = card.querySelector('.qr');
-        box.innerHTML = '';
-        new QRCode(box, { text: link, width: 160, height: 160, colorDark: '#10061a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        box.replaceChildren(drawQr(link, logo));
         card.querySelector('.link').textContent = link;
       });
     }
-    baseInput.addEventListener('input', render);
-    render();
+
+    const logoImage = new Image();
+    logoImage.onload = () => {
+      render(logoImage);
+      baseInput.addEventListener('input', () => render(logoImage));
+    };
+    logoImage.src = LOGO_SRC;
   </script>
 </body>
 </html>`;
