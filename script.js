@@ -31,6 +31,21 @@ document.addEventListener('keydown', (event) => {
 // Footer year
 document.getElementById('year').textContent = new Date().getFullYear();
 
+// The Trail (QR scavenger hunt) backend, picked by hostname. Hosts without one
+// (including PROD, for now) keep the menu link hidden.
+const TEST_TRAIL_URL = 'https://pls-trail-test.baseball4537.workers.dev/api/trail';
+const trailUrl = {
+  localhost: TEST_TRAIL_URL,
+  '127.0.0.1': TEST_TRAIL_URL,
+  'shankardba.github.io': TEST_TRAIL_URL,
+}[location.hostname];
+
+const trailItem = document.getElementById('trailItem');
+if (trailItem && trailUrl) {
+  document.getElementById('trailLink').href = trailUrl;
+  trailItem.hidden = false;
+}
+
 // Mailing list backend, picked by hostname. Hosts without one (including
 // PROD, for now) keep the Join pill hidden and the unsubscribe form disabled.
 const TEST_LIST_ENDPOINT = 'https://pls-list-test.baseball4537.workers.dev/api/list';

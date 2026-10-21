@@ -1,0 +1,23 @@
+# Test Trail Worker on the band's Cloudflare account, workers.dev only
+# (no route on pinkladyslipper.net). Used by DEV (GitHub Pages) and localhost.
+#
+# Deploy from this folder (never the repo root: PROD's build runs
+# `wrangler deploy` there):
+#   export CLOUDFLARE_API_TOKEN=$(cat ~/.config/cloudflare-pls-prod/token)
+#   export CLOUDFLARE_ACCOUNT_ID=feaccfb4bfda7d10bd645e2d95928d51
+#   npx wrangler d1 execute pls-trail-test --remote --file schema.sql --config wrangler.test.toml
+#   npx wrangler deploy --config wrangler.test.toml
+#   npx wrangler secret put ADMIN_PASSWORD --config wrangler.test.toml
+
+name = "pls-trail-test"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+d1_databases = [
+  { binding = "DB", database_name = "pls-trail-test", database_id = "REPLACE_AFTER_d1_create" },
+]
+
+[vars]
+SITE_NAME = "Pink Lady Slipper (TEST)"
+SITE_URL = "https://shankardba.github.io/pinkladyslipper"
