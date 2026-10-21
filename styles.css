@@ -650,6 +650,10 @@ a {
   border-color: var(--color-primary);
 }
 
+.join-form .ml-row {
+  justify-content: center;
+}
+
 .join-form button {
   padding: 9px 18px;
   font-family: var(--font-display);
