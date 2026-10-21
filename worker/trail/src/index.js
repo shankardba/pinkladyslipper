@@ -13,12 +13,23 @@
 //   scans(visitor, token, scanned_at)     PRIMARY KEY (visitor, token), so a
 //                                         visitor can only count a spot once
 //
-// Bindings: DB (D1)
+// Email recovery (optional, on when RESEND_API_KEY and EMAIL_FROM are set): a
+// visitor can link an email, confirm it from a one-time emailed link, and get
+// their collection back on a new phone the same way. Entering an email never
+// shows anyone's progress; it only sends a link to that inbox. See email.js.
+//   identities(email PK, visitor)     confirmed email -> canonical visitor
+//   aliases(visitor PK, canonical)    visitor ids merged into one person
+//   magic_tokens, email_sends         one-time links and rate limiting
+//
+// Bindings: DB (D1), LIST (optional KV: the mailing list, for the opt-in box)
 // Vars:     SITE_NAME, SITE_URL (the main site, for the logo and back link),
-//           PUBLIC_BASE (optional; origin the admin page puts in QR codes)
-// Secrets:  ADMIN_PASSWORD (required for /admin)
+//           PUBLIC_BASE (optional; origin for admin QR codes and emailed links),
+//           EMAIL_FROM, TURNSTILE_SITE_KEY (optional)
+// Secrets:  ADMIN_PASSWORD (required for /admin), RESEND_API_KEY,
+//           TURNSTILE_SECRET (optional)
 
 import { LOGO_LINE_DATA_URI } from './logo.js';
+import { emailEnabled, sendLinkEmail } from './email.js';
 
 const PREFIX = '/api/trail';
 const COOKIE = 'pls_trail';
@@ -26,13 +37,16 @@ const TOKEN_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'; // no look-alikes (i, 
 const TOKEN_LENGTH = 8;
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '');
 
     if (path === PREFIX + '/admin' || path.startsWith(PREFIX + '/admin/')) {
       return admin(request, env, url, path);
     }
+
+    const recovery = await recoveryRoute(request, env, ctx, url, path);
+    if (recovery) return recovery;
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return new Response('Method not allowed', { status: 405 });
@@ -52,24 +66,26 @@ export default {
 async function collection(request, env, url) {
   const gated = phoneOnlyGate(request, env, url);
   if (gated) return gated;
-  const visitor = getVisitor(request);
+  const visitor = await getVisitor(env, request);
   if (request.method === 'HEAD') return htmlResponse('', 200, visitor);
   const { found, total } = await progress(env, visitor.id);
-  return htmlResponse(page(env, { found, total }), 200, visitor);
+  const recoveryHtml = await recoveryCard(env, visitor.id, found.length);
+  return htmlResponse(page(env, { found, total, recoveryHtml }), 200, visitor);
 }
 
 async function scan(request, env, token, url) {
   // Desktop browsers get a "phones only" page and nothing is recorded.
   const gated = phoneOnlyGate(request, env, url);
   if (gated) return gated;
-  const visitor = getVisitor(request);
+  const visitor = await getVisitor(env, request);
   // Link-preview bots often send HEAD first; never count those as a scan.
   if (request.method === 'HEAD') return htmlResponse('', 200, visitor);
 
   const spot = await env.DB.prepare('SELECT token, name FROM spots WHERE token = ?').bind(token).first();
   if (!spot) {
     const { found, total } = await progress(env, visitor.id);
-    return htmlResponse(page(env, { found, total, banner: { tone: 'unknown' } }), 404, visitor);
+    const recoveryHtml = await recoveryCard(env, visitor.id, found.length);
+    return htmlResponse(page(env, { found, total, banner: { tone: 'unknown' }, recoveryHtml }), 404, visitor);
   }
 
   const [insert, foundRows, totalRow] = await env.DB.batch([
@@ -81,7 +97,8 @@ async function scan(request, env, token, url) {
   const found = foundRows.results;
   const total = totalRow.results[0].n;
   const banner = { tone: isNew ? 'new' : 'repeat', name: spot.name };
-  return htmlResponse(page(env, { found, total, banner }), 200, visitor);
+  const recoveryHtml = await recoveryCard(env, visitor.id, found.length);
+  return htmlResponse(page(env, { found, total, banner, recoveryHtml }), 200, visitor);
 }
 
 function foundQuery(env, visitorId) {
@@ -101,9 +118,17 @@ async function progress(env, visitorId) {
   return { found: foundRows.results, total: totalRow.results[0].n };
 }
 
-function getVisitor(request) {
+// `cookieId` is what the browser holds; `id` is the person it belongs to. They
+// differ once email recovery has merged two visitor ids into one.
+async function getVisitor(env, request) {
   const match = (request.headers.get('Cookie') || '').match(/(?:^|;\s*)pls_trail=([0-9a-f-]{36})(?:;|$)/);
-  return { id: match ? match[1] : crypto.randomUUID() };
+  const cookieId = match ? match[1] : crypto.randomUUID();
+  return { cookieId, id: match ? await resolveVisitor(env, cookieId) : cookieId };
+}
+
+async function resolveVisitor(env, id) {
+  const alias = await env.DB.prepare('SELECT canonical FROM aliases WHERE visitor = ?').bind(id).first();
+  return alias ? alias.canonical : id;
 }
 
 function htmlResponse(body, status, visitor) {
@@ -112,7 +137,7 @@ function htmlResponse(body, status, visitor) {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       // Re-set on every visit so the year-long expiry slides forward.
-      'Set-Cookie': `${COOKIE}=${visitor.id}; Max-Age=31536000; Path=${PREFIX}; Secure; HttpOnly; SameSite=Lax`,
+      'Set-Cookie': `${COOKIE}=${visitor.cookieId}; Max-Age=31536000; Path=${PREFIX}; Secure; HttpOnly; SameSite=Lax`,
       'Cache-Control': 'no-store',
       'X-Robots-Tag': 'noindex',
       'Referrer-Policy': 'no-referrer',
@@ -135,6 +160,9 @@ function bannerHtml(banner, found, total) {
   if (banner.tone === 'unknown') {
     return `<p class="banner banner-unknown"><strong>That code isn't on the trail.</strong> Check the QR code and try again.</p>`;
   }
+  if (banner.tone === 'info') {
+    return `<p class="banner banner-new"><strong>${escapeHtml(banner.text)}</strong></p>`;
+  }
   const lead = banner.tone === 'new'
     ? `<strong>New find: ${escapeHtml(banner.name)}</strong>`
     : `<strong>You already have ${escapeHtml(banner.name)}.</strong> Keep looking for the others.`;
@@ -142,7 +170,7 @@ function bannerHtml(banner, found, total) {
   return `<p class="banner banner-${banner.tone}">${lead}${tail}</p>`;
 }
 
-function page(env, { found, total, banner }) {
+function page(env, { found, total, banner, recoveryHtml }) {
   const n = found.length;
   const headline = n === 0 ? 'No codes yet' : `Found ${plural(n)}!`;
   const cards = found.map((f) => `
@@ -199,6 +227,8 @@ ${head(env)}<body>
 
     <ul class="grid">${cards.join('')}
     </ul>
+
+    ${recoveryHtml || ''}
 
     <p class="help">Pink lady's slippers are hiding around town. Scan the QR code on each one with your phone's camera to add it to your collection.</p>
   </main>
@@ -305,6 +335,22 @@ body{background:radial-gradient(circle at 15% 0%,rgba(246,2,188,.28),transparent
 .card:not(.found) .card-name{color:var(--muted);letter-spacing:2px}
 .card-note{font-size:.8rem;color:var(--muted)}
 .help{color:var(--muted);font-size:.9rem;text-align:center}
+.wrap button{font:inherit;font-family:'Poppins',sans-serif;font-weight:600;padding:12px 20px;border:0;border-radius:999px;background:linear-gradient(135deg,var(--pink),var(--cyan));color:#10061a;cursor:pointer}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.recovery{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:14px;background:var(--bg-alt);border:1px solid rgba(2,211,255,.18)}
+.recovery h2{font-family:'Poppins',sans-serif;font-size:1.05rem}
+.recovery p,.recovery summary,.recovery label{color:var(--muted);font-size:.92rem}
+.recovery form{display:flex;flex-direction:column;gap:10px}
+.recovery input[type=email]{font:inherit;font-size:16px;padding:12px;border-radius:10px;border:1px solid #3a2d5c;background:var(--bg);color:var(--text);width:100%}
+.recovery .check{display:flex;gap:10px;align-items:flex-start}
+.recovery .check input{margin-top:5px}
+.recovery summary{cursor:pointer}
+.recovery details form{margin-top:12px}
+.recovery .saved{color:var(--green);font-weight:600}
+.prose{display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center}
+.prose p{color:var(--muted)}
+.prose form{width:100%}
+.prose a{color:var(--cyan)}
 .desktop-note{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;padding-top:12vh}
 .desktop-note.show{display:flex}
 .desktop-note p{color:var(--muted);max-width:34ch}
@@ -312,6 +358,254 @@ body{background:radial-gradient(circle at 15% 0%,rgba(246,2,188,.28),transparent
 @media (hover:hover) and (pointer:fine){.wrap>:not(.brand):not(.desktop-note){display:none}.desktop-note{display:flex}}
 @media (prefers-reduced-motion:no-preference){.banner{animation:in .45s ease}@keyframes in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}}
 `;
+
+// ---------- email recovery ----------
+
+const EMAIL_RE = /^[^\s@<>()",;:]+@[^\s@<>()",;:]+\.[^\s@<>()",;:]{2,}$/;
+const LINK_MINUTES = 15;
+const MAX_PER_EMAIL_PER_HOUR = 3;
+const MAX_PER_IP_PER_HOUR = 10;
+
+async function recoveryRoute(request, env, ctx, url, path) {
+  if (!emailEnabled(env)) return null;
+  const method = request.method;
+
+  if (method === 'POST' && (path === PREFIX + '/save' || path === PREFIX + '/restore')) {
+    return requestLink(request, env, ctx, url, path.endsWith('/save') ? 'save' : 'restore');
+  }
+  if (method === 'GET' && path === PREFIX + '/sent') {
+    return sentPage(request, env, url);
+  }
+  const linkMatch = path.match(/^\/api\/trail\/link\/([A-Za-z0-9_-]{20,64})$/);
+  if (linkMatch && method === 'GET') return linkPage(request, env, url, linkMatch[1]);
+  if (linkMatch && method === 'POST') return confirmLink(request, env, url, linkMatch[1]);
+  return null;
+}
+
+// The reply never depends on whether the address is known: the work happens
+// after the response (so timing doesn't give it away either), and the page
+// always says "if this address qualifies, we sent a link".
+async function requestLink(request, env, ctx, url, purpose) {
+  if (!sameOrigin(request, url)) return new Response('Forbidden', { status: 403 });
+  const form = await request.formData().catch(() => null);
+  const visitor = await getVisitor(env, request);
+  const input = {
+    email: normalizeEmail(form && form.get('email')),
+    joinList: purpose === 'save' && Boolean(form && form.get('join_list')),
+    turnstile: form && form.get('cf-turnstile-response'),
+    ip: request.headers.get('CF-Connecting-IP') || 'unknown',
+  };
+  const base = (env.PUBLIC_BASE || url.origin).replace(/\/+$/, '');
+  ctx.waitUntil(
+    processLinkRequest(env, input, visitor.id, purpose, base).catch((err) => console.error('link request failed', err)),
+  );
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: `${PREFIX}/sent?for=${purpose}`,
+      'Set-Cookie': `${COOKIE}=${visitor.cookieId}; Max-Age=31536000; Path=${PREFIX}; Secure; HttpOnly; SameSite=Lax`,
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
+async function processLinkRequest(env, input, visitorId, purpose, base) {
+  const { email, ip } = input;
+  if (!email) return;
+  if (env.TURNSTILE_SECRET && !(await verifyTurnstile(env.TURNSTILE_SECRET, input.turnstile, ip))) return;
+
+  // Rate limit every attempt, known address or not, so the limit leaks nothing.
+  await env.DB.prepare("DELETE FROM email_sends WHERE sent_at < datetime('now', '-1 day')").run();
+  const countSince = (key) =>
+    env.DB.prepare("SELECT COUNT(*) AS n FROM email_sends WHERE key = ? AND sent_at > datetime('now', '-1 hour')").bind(key);
+  const [perEmail, perIp] = await env.DB.batch([countSince('e:' + email), countSince('i:' + ip)]);
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO email_sends (key) VALUES (?)').bind('e:' + email),
+    env.DB.prepare('INSERT INTO email_sends (key) VALUES (?)').bind('i:' + ip),
+  ]);
+  if (perEmail.results[0].n >= MAX_PER_EMAIL_PER_HOUR || perIp.results[0].n >= MAX_PER_IP_PER_HOUR) return;
+
+  if (purpose === 'restore') {
+    const known = await env.DB.prepare('SELECT 1 AS x FROM identities WHERE email = ?').bind(email).first();
+    if (!known) return; // nothing to restore, and nothing is sent
+  }
+
+  const token = randomToken();
+  await env.DB.prepare(
+    `INSERT INTO magic_tokens (token_hash, purpose, email, visitor, join_list, expires_at)
+     VALUES (?, ?, ?, ?, ?, datetime('now', '+${LINK_MINUTES} minutes'))`,
+  ).bind(await sha256Hex(token), purpose, email, visitorId, input.joinList && env.LIST ? 1 : 0).run();
+  await sendLinkEmail(env, { to: email, purpose, link: `${base}${PREFIX}/link/${token}` });
+}
+
+function sentPage(request, env, url) {
+  const restore = url.searchParams.get('for') === 'restore';
+  const body = restore
+    ? `<p>If that address has saved progress, we've emailed you a link. Tap it on the phone you want your collection on.</p>`
+    : `<p>We've emailed you a link to confirm. Tap it to finish saving your progress.</p>`;
+  return proseResponse(env, 'Check your inbox', `${body}<p>It works once and expires in ${LINK_MINUTES} minutes.</p><p><a href="${PREFIX}">Back to my collection</a></p>`, 200);
+}
+
+// Opening the link only shows a button. The restore itself is a POST, so mail
+// scanners that fetch links in advance can't use the link up.
+async function linkPage(request, env, url, token) {
+  const gated = phoneOnlyGate(request, env, url);
+  if (gated) return gated;
+  const row = await env.DB.prepare(
+    "SELECT purpose FROM magic_tokens WHERE token_hash = ? AND used_at IS NULL AND expires_at > datetime('now')",
+  ).bind(await sha256Hex(token)).first();
+  if (!row) return expiredPage(env);
+  const save = row.purpose === 'save';
+  const body = `<p>${save ? 'Link this email to your Trail collection so you can get it back later.' : 'Bring your saved collection onto this phone.'}</p>
+    <form method="post" action="${PREFIX}/link/${escapeHtml(token)}"><button type="submit">${save ? 'Save my progress' : 'Restore my progress'}</button></form>`;
+  return proseResponse(env, save ? 'Save your progress' : 'Restore your progress', body, 200);
+}
+
+async function confirmLink(request, env, url, token) {
+  if (!sameOrigin(request, url)) return new Response('Forbidden', { status: 403 });
+  const hash = await sha256Hex(token);
+  const claim = await env.DB.prepare(
+    "UPDATE magic_tokens SET used_at = datetime('now') WHERE token_hash = ? AND used_at IS NULL AND expires_at > datetime('now')",
+  ).bind(hash).run();
+  if (claim.meta.changes !== 1) return expiredPage(env);
+  const row = await env.DB.prepare('SELECT purpose, email, visitor, join_list FROM magic_tokens WHERE token_hash = ?').bind(hash).first();
+
+  const here = await getVisitor(env, request); // the browser that tapped the link
+  const known = await env.DB.prepare('SELECT visitor FROM identities WHERE email = ?').bind(row.email).first();
+  let canonical;
+  if (known) {
+    canonical = await resolveVisitor(env, known.visitor);
+  } else if (row.purpose === 'save') {
+    canonical = await resolveVisitor(env, row.visitor);
+    await env.DB.prepare('INSERT OR IGNORE INTO identities (email, visitor) VALUES (?, ?)').bind(row.email, canonical).run();
+  } else {
+    return expiredPage(env);
+  }
+  // Fold in whichever visitor ids belong to this person: the browser that
+  // asked for the link and the one that opened it (they can differ, e.g. an
+  // email app's built-in browser).
+  await mergeVisitors(env, canonical, [row.visitor, here.cookieId, here.id]);
+  if (row.join_list && env.LIST) await joinMailingList(env, row.email).catch((err) => console.error('mailing list opt-in failed', err));
+
+  const { found, total } = await progress(env, canonical);
+  const banner = { tone: 'info', text: row.purpose === 'save' ? 'Progress saved!' : 'Progress restored!' };
+  const recoveryHtml = await recoveryCard(env, canonical, found.length);
+  return htmlResponse(page(env, { found, total, banner, recoveryHtml }), 200, { cookieId: here.cookieId, id: canonical });
+}
+
+async function mergeVisitors(env, canonical, others) {
+  const ids = [...new Set(others)].filter((id) => id && id !== canonical);
+  const statements = [];
+  for (const other of ids) {
+    statements.push(
+      env.DB.prepare('INSERT OR IGNORE INTO scans (visitor, token, scanned_at) SELECT ?, token, scanned_at FROM scans WHERE visitor = ?').bind(canonical, other),
+      env.DB.prepare('DELETE FROM scans WHERE visitor = ?').bind(other),
+      env.DB.prepare('UPDATE aliases SET canonical = ? WHERE canonical = ?').bind(canonical, other),
+      env.DB.prepare('INSERT OR REPLACE INTO aliases (visitor, canonical) VALUES (?, ?)').bind(other, canonical),
+      env.DB.prepare('UPDATE identities SET visitor = ? WHERE visitor = ?').bind(canonical, other),
+    );
+  }
+  if (statements.length) await env.DB.batch(statements);
+}
+
+// Same record the mailing-list Worker writes, so its admin page lists these
+// people too. An existing subscriber is left untouched.
+async function joinMailingList(env, email) {
+  const key = 'sub:' + email;
+  const existing = await env.LIST.getWithMetadata(key);
+  if (!existing.metadata) {
+    await env.LIST.put(key, '', {
+      metadata: { email, name: '', source: 'trail', subscribed_at: new Date().toISOString() },
+    });
+  }
+}
+
+// The card under the collection: a "saved" note once an email is linked, a
+// save form for someone with finds, or just the restore form for a new phone.
+async function recoveryCard(env, visitorId, foundCount) {
+  if (!emailEnabled(env)) return '';
+  const linked = await env.DB.prepare('SELECT 1 AS x FROM identities WHERE visitor = ? LIMIT 1').bind(visitorId).first();
+  if (linked) return `<section class="recovery"><p class="saved">Progress saved to your email &#10003;</p></section>`;
+
+  const turnstile = env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET
+    ? `<div class="cf-turnstile" data-sitekey="${escapeHtml(env.TURNSTILE_SITE_KEY)}"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>`
+    : '';
+  const emailField = `<label>Your email<input type="email" name="email" required autocomplete="email" inputmode="email" maxlength="254" /></label>`;
+  const restoreForm = `<form method="post" action="${PREFIX}/restore">${emailField}${turnstile}<button type="submit">Email me a restore link</button></form>`;
+
+  if (foundCount === 0) {
+    return `<section class="recovery"><h2>On a new phone?</h2><p>Enter the email you saved your progress with and we'll send a link to get it back.</p>${restoreForm}</section>`;
+  }
+  const optIn = env.LIST
+    ? `<label class="check"><input type="checkbox" name="join_list" value="1" /><span>Also send me news from Pink Lady Slipper</span></label>`
+    : '';
+  return `<section class="recovery">
+      <h2>Keep your collection safe</h2>
+      <p>Save your progress to your email so you can get it back if you change phones or clear your browser. We'll send you a link; there's no password. We keep your email only for this.</p>
+      <form method="post" action="${PREFIX}/save">${emailField}${optIn}${turnstile}<button type="submit">Save my progress</button></form>
+      <details><summary>Already saved on another phone? Restore it</summary>${restoreForm}</details>
+    </section>`;
+}
+
+function expiredPage(env) {
+  return proseResponse(env, 'Link expired', `<p>This link has expired or was already used.</p><p><a href="${PREFIX}">Back to my collection</a> and ask for a new one.</p>`, 410);
+}
+
+function proseResponse(env, heading, bodyHtml, status) {
+  return new Response(`<!DOCTYPE html>
+<html lang="en">
+${head(env)}<body>
+  <main class="wrap">
+    ${brandHtml(env)}
+    <section class="prose">
+      <h1 class="count">${escapeHtml(heading)}</h1>
+      ${bodyHtml}
+    </section>
+  </main>
+</body>
+</html>`, {
+    status,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Robots-Tag': 'noindex',
+      'Referrer-Policy': 'no-referrer',
+    },
+  });
+}
+
+function sameOrigin(request, url) {
+  const origin = request.headers.get('Origin');
+  return !origin || origin === url.origin;
+}
+
+function normalizeEmail(value) {
+  if (typeof value !== 'string') return null;
+  const email = value.trim().toLowerCase();
+  if (email.length > 254 || !EMAIL_RE.test(email)) return null;
+  return email;
+}
+
+function randomToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyTurnstile(secret, token, ip) {
+  if (!token) return false;
+  const form = new FormData();
+  form.append('secret', secret);
+  form.append('response', token);
+  if (ip && ip !== 'unknown') form.append('remoteip', ip);
+  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form });
+  const data = await res.json().catch(() => ({}));
+  return data.success === true;
+}
 
 // ---------- admin ----------
 

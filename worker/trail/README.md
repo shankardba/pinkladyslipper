@@ -13,6 +13,29 @@ A standalone Cloudflare Worker behind "The Trail", the QR scavenger hunt. Each p
 
 Phones only: desktop browsers get a "Phones only" page from `/s/<token>` and `/`, nothing is recorded, and no cookie is set. Detection is best-effort and errs toward letting people in: Chromium client hints (`Sec-CH-UA-Mobile`/`Platform`) and Windows/Linux/ChromeOS user agents are treated as desktop, while a "Macintosh" user agent is left alone because iPadOS Safari reports it. A stylesheet fallback hides the game for any mouse-driven device (`hover: hover` and `pointer: fine`) that slips through. A phone that trips the gate can add `?phone=1` (the page links to it). `/admin` is never gated. To try the game on a laptop, use the browser's device emulation or add `?phone=1`.
 
+## Email recovery (optional)
+
+Lets a fan get their collection back after changing phones or clearing the browser, with no password. It is off until the `RESEND_API_KEY` secret is set; until then the pages look as before and the endpoints do not exist.
+
+- **Save:** under the collection a card asks for an email (plus an unchecked "Also send me news" box when the `LIST` KV binding is present). The Worker emails a one-time link; tapping it and pressing **Save my progress** links the email to the visitor. Once linked the card just says "Progress saved to your email"; later scans add to the same record, so there is nothing to save again.
+- **Restore:** on a new phone, enter the email and tap the emailed link, then **Restore my progress**. Finds made on the new phone first are merged in (a code found twice still counts once).
+- **No one can read another person's progress:** the email box only sends a link to that inbox. The reply is identical whether or not the address is known, the work happens after the response, an unknown address gets no email, and the email is never displayed anywhere (the admin page does not show it).
+- **Links:** random, single use, 15 minutes, only a hash stored. Opening the link just shows a button; the change is a POST, so mail scanners that prefetch links cannot use it up.
+- **Abuse limits:** 3 emails per address and 10 per IP per hour (silently dropped beyond that), same-origin POSTs only, and optional Turnstile (`TURNSTILE_SITE_KEY` var plus `TURNSTILE_SECRET` secret; the forms work without it).
+- **Data:** `identities(email, visitor)` keeps the plain lowercased email for internal use; `aliases(visitor, canonical)` records merged visitor ids (cookies are never rewritten); `magic_tokens`; `email_sends`. The mailing-list opt-in writes the same `sub:<email>` record as the mailing-list Worker, applied only after the link is confirmed.
+
+Setup (test): create a free Resend account, create an API key, save it to `~/.config/pls-trail/resend-api-key`, then:
+
+```
+export CLOUDFLARE_API_TOKEN=$(cat ~/.config/cloudflare-pls-prod/token)
+export CLOUDFLARE_ACCOUNT_ID=feaccfb4bfda7d10bd645e2d95928d51
+cd worker/trail
+npx wrangler d1 execute pls-trail-test --remote --file schema.sql --config wrangler.test.toml
+npx wrangler secret put RESEND_API_KEY --config wrangler.test.toml < ~/.config/pls-trail/resend-api-key
+```
+
+Until a sending domain is verified in Resend, `EMAIL_FROM` is `onboarding@resend.dev`, which only delivers to the Resend account owner's own address. For prod, verify pinkladyslipper.net in Resend (SPF/DKIM records on the domain), then set `EMAIL_FROM` to e.g. `Pink Lady Slipper <trail@pinkladyslipper.net>`.
+
 The visitor is an anonymous UUID in a first-party `HttpOnly; Secure; SameSite=Lax` cookie set by the Worker, scoped to `/api/trail`. Clearing browser data or switching phones starts a visitor over.
 
 QR tokens are 8 random characters from a no-look-alike alphabet, so nobody can claim spots by guessing URLs. Tokens only appear on the password-protected admin page.
