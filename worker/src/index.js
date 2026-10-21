@@ -11,6 +11,7 @@
 // Bindings: LIST (KV namespace)
 // Vars:     SITE_NAME, ALLOWED_ORIGINS (comma-separated), UNSUBSCRIBE_URL
 //           (shown on the admin page as the footer line for every email)
+//           ADMIN_USER (admin username; defaults to "admin")
 // Secrets:  ADMIN_PASSWORD (required for /admin), TURNSTILE_SECRET (optional;
 //           when unset, the Turnstile check is skipped)
 
@@ -85,7 +86,7 @@ async function unsubscribe(body, env, origin) {
 
 async function admin(request, env, url, path) {
   if (!env.ADMIN_PASSWORD) return new Response('Admin password not configured.', { status: 503 });
-  if (!(await checkBasicAuth(request, env.ADMIN_PASSWORD))) {
+  if (!(await checkBasicAuth(request, env.ADMIN_USER || 'admin', env.ADMIN_PASSWORD))) {
     return new Response('Password required.', {
       status: 401,
       headers: { 'WWW-Authenticate': 'Basic realm="Mailing list admin", charset="UTF-8"', 'Cache-Control': 'no-store' },
@@ -290,13 +291,17 @@ async function verifyTurnstile(secret, token, ip) {
   return data.success === true;
 }
 
-async function checkBasicAuth(request, password) {
+async function checkBasicAuth(request, username, password) {
   const header = request.headers.get('Authorization') || '';
   if (!header.startsWith('Basic ')) return false;
   let decoded;
   try { decoded = atob(header.slice(6)); } catch { return false; }
-  const supplied = decoded.slice(decoded.indexOf(':') + 1); // any username
-  const [a, b] = await Promise.all([sha256(supplied), sha256(password)]);
+  const sep = decoded.indexOf(':');
+  if (sep < 0) return false;
+  const [a, b] = await Promise.all([
+    sha256(decoded.slice(0, sep) + '\n' + decoded.slice(sep + 1)),
+    sha256(username + '\n' + password),
+  ]);
   return crypto.subtle.timingSafeEqual(a, b);
 }
 

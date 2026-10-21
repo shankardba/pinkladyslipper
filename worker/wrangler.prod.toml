@@ -1,0 +1,26 @@
+# PROD mailing-list Worker on the band's Cloudflare account, routed same-origin
+# at pinkladyslipper.net/api/list* (and www). Deploy from this folder only:
+#   export CLOUDFLARE_API_TOKEN=$(cat ~/.config/cloudflare-pls-prod/token)
+#   export CLOUDFLARE_ACCOUNT_ID=feaccfb4bfda7d10bd645e2d95928d51
+#   npx wrangler deploy --config wrangler.prod.toml
+#   npx wrangler secret put ADMIN_PASSWORD --config wrangler.prod.toml
+
+name = "pls-list"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+routes = [
+  { pattern = "pinkladyslipper.net/api/list*", zone_name = "pinkladyslipper.net" },
+  { pattern = "www.pinkladyslipper.net/api/list*", zone_name = "pinkladyslipper.net" },
+]
+
+kv_namespaces = [
+  { binding = "LIST", id = "b84d6d8643f64ee7a7dcd53dacb4d209" },
+]
+
+[vars]
+SITE_NAME = "Pink Lady Slipper"
+ALLOWED_ORIGINS = "https://pinkladyslipper.net,https://www.pinkladyslipper.net"
+UNSUBSCRIBE_URL = "pinkladyslipper.net/unsubscribe"
+ADMIN_USER = "admin"

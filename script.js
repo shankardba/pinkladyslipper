@@ -48,13 +48,15 @@ if (trailItem && trailUrl && window.matchMedia('(hover: none) and (pointer: coar
   trailItem.hidden = false;
 }
 
-// Mailing list backend, picked by hostname. Hosts without one (including
-// PROD, for now) keep the Join pill hidden and the unsubscribe form disabled.
+// Mailing list backend, picked by hostname. PROD uses the same-origin route;
+// other hosts keep the Join pill hidden and the unsubscribe form disabled.
 const TEST_LIST_ENDPOINT = 'https://pls-list-test.baseball4537.workers.dev/api/list';
 const listEndpoint = {
   localhost: TEST_LIST_ENDPOINT,
   '127.0.0.1': TEST_LIST_ENDPOINT,
   'shankardba.github.io': TEST_LIST_ENDPOINT,
+  'pinkladyslipper.net': '/api/list',
+  'www.pinkladyslipper.net': '/api/list',
 }[location.hostname];
 
 // Mailing list signup
