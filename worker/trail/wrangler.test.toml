@@ -15,7 +15,7 @@ compatibility_date = "2026-10-01"
 workers_dev = true
 
 d1_databases = [
-  { binding = "DB", database_name = "pls-trail-test", database_id = "REPLACE_AFTER_d1_create" },
+  { binding = "DB", database_name = "pls-trail-test", database_id = "f120e559-407a-4f3e-9169-4ff179fa9fc7" },
 ]
 
 [vars]
