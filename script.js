@@ -32,7 +32,9 @@ document.addEventListener('keydown', (event) => {
 document.getElementById('year').textContent = new Date().getFullYear();
 
 // The Trail (QR scavenger hunt) backend, picked by hostname. Hosts without one
-// (including PROD, for now) keep the menu link hidden.
+// (including PROD, for now) keep the menu link hidden. It is also hidden on
+// anything but a touch phone or tablet, since the game is played by scanning
+// a QR code around town.
 const TEST_TRAIL_URL = 'https://pls-trail-test.baseball4537.workers.dev/api/trail';
 const trailUrl = {
   localhost: TEST_TRAIL_URL,
@@ -41,7 +43,7 @@ const trailUrl = {
 }[location.hostname];
 
 const trailItem = document.getElementById('trailItem');
-if (trailItem && trailUrl) {
+if (trailItem && trailUrl && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
   document.getElementById('trailLink').href = trailUrl;
   trailItem.hidden = false;
 }

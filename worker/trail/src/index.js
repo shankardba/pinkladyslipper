@@ -38,10 +38,10 @@ export default {
       return new Response('Method not allowed', { status: 405 });
     }
 
-    if (path === PREFIX) return collection(request, env);
+    if (path === PREFIX) return collection(request, env, url);
 
     const scanMatch = path.match(/^\/api\/trail\/s\/([A-Za-z0-9]{4,32})$/);
-    if (scanMatch) return scan(request, env, scanMatch[1]);
+    if (scanMatch) return scan(request, env, scanMatch[1], url);
 
     return new Response('Not found', { status: 404 });
   },
@@ -49,14 +49,19 @@ export default {
 
 // ---------- visitor pages ----------
 
-async function collection(request, env) {
+async function collection(request, env, url) {
+  const gated = phoneOnlyGate(request, env, url);
+  if (gated) return gated;
   const visitor = getVisitor(request);
   if (request.method === 'HEAD') return htmlResponse('', 200, visitor);
   const { found, total } = await progress(env, visitor.id);
   return htmlResponse(page(env, { found, total }), 200, visitor);
 }
 
-async function scan(request, env, token) {
+async function scan(request, env, token, url) {
+  // Desktop browsers get a "phones only" page and nothing is recorded.
+  const gated = phoneOnlyGate(request, env, url);
+  if (gated) return gated;
   const visitor = getVisitor(request);
   // Link-preview bots often send HEAD first; never count those as a scan.
   if (request.method === 'HEAD') return htmlResponse('', 200, visitor);
@@ -139,7 +144,6 @@ function bannerHtml(banner, found, total) {
 
 function page(env, { found, total, banner }) {
   const n = found.length;
-  const siteUrl = (env.SITE_URL || '').replace(/\/+$/, '');
   const headline = n === 0 ? 'No codes yet' : `Found ${plural(n)}!`;
   const cards = found.map((f) => `
         <li class="card found">
@@ -159,18 +163,7 @@ function page(env, { found, total, banner }) {
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex" />
-  <meta name="theme-color" content="#06040f" />
-  <title>The Trail | ${escapeHtml(env.SITE_NAME || 'Pink Lady Slipper')}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&family=Kaushan+Script&display=swap" rel="stylesheet" />
-  <style>${CSS}</style>
-</head>
-<body>
+${head(env)}<body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
       <linearGradient id="pouch" x1="0" y1="0" x2="0" y2="1">
@@ -190,10 +183,8 @@ function page(env, { found, total, banner }) {
   </svg>
 
   <main class="wrap">
-    <a class="brand" href="${escapeHtml(siteUrl || '/')}">
-      ${siteUrl ? `<img src="${escapeHtml(siteUrl)}/images/logo.webp" alt="" width="40" height="40" />` : ''}
-      <span>Pink Lady Slipper</span>
-    </a>
+    ${brandHtml(env)}
+    ${phoneNote()}
 
     ${bannerHtml(banner, found, total)}
 
@@ -213,6 +204,79 @@ function page(env, { found, total, banner }) {
   </main>
 </body>
 </html>`;
+}
+
+// ---------- phones only ----------
+
+// The Trail is played by scanning a QR code with a phone, so a desktop browser
+// gets a short explanation instead of the game, and nothing is recorded.
+// Detection is best-effort and errs toward letting people in: Chromium sends
+// client hints, other desktop browsers are caught by their user agent, and a
+// "Macintosh" user agent is left alone because iPadOS Safari reports it too.
+// A phone that trips this can add ?phone=1 (the page links to it).
+function isDesktop(request) {
+  const ua = request.headers.get('User-Agent') || '';
+  const mobileHint = request.headers.get('Sec-CH-UA-Mobile');
+  const platform = (request.headers.get('Sec-CH-UA-Platform') || '').replace(/"/g, '');
+  if (mobileHint === '?1') return false;
+  if (mobileHint === '?0' && ['Windows', 'macOS', 'Linux', 'Chrome OS', 'ChromeOS'].includes(platform)) return true;
+  if (/Mobi|Android|iPhone|iPad|iPod/i.test(ua)) return false;
+  return /Windows NT|X11|CrOS/i.test(ua);
+}
+
+function phoneOnlyGate(request, env, url) {
+  if (url.searchParams.get('phone') === '1' || !isDesktop(request)) return null;
+  const href = url.pathname + '?phone=1';
+  return new Response(`<!DOCTYPE html>
+<html lang="en">
+${head(env)}<body>
+  <main class="wrap">
+    ${brandHtml(env)}
+    ${phoneNote(href)}
+  </main>
+</body>
+</html>`, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Vary': 'User-Agent, Sec-CH-UA-Mobile, Sec-CH-UA-Platform',
+      'X-Robots-Tag': 'noindex',
+    },
+  });
+}
+
+// With an href this is the server-rendered desktop page. Without one it is the
+// copy of the same message that the stylesheet reveals for mouse-driven
+// devices the server could not tell apart (for example Safari on a Mac).
+function phoneNote(href) {
+  return `<section class="desktop-note${href ? ' show' : ''}">
+      <h1 class="count">Phones only</h1>
+      <p>The Trail is a scavenger hunt around town. Scan the QR code on a pink lady's slipper with your phone's camera to play.</p>
+      ${href ? `<p><a href="${escapeHtml(href)}">On a phone? Continue anyway</a></p>` : ''}
+    </section>`;
+}
+
+function brandHtml(env) {
+  const siteUrl = (env.SITE_URL || '').replace(/\/+$/, '');
+  return `<a class="brand" href="${escapeHtml(siteUrl || '/')}">
+      ${siteUrl ? `<img src="${escapeHtml(siteUrl)}/images/logo.webp" alt="" width="40" height="40" />` : ''}
+      <span>Pink Lady Slipper</span>
+    </a>`;
+}
+
+function head(env) {
+  return `<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#06040f" />
+  <title>The Trail | ${escapeHtml(env.SITE_NAME || 'Pink Lady Slipper')}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&family=Kaushan+Script&display=swap" rel="stylesheet" />
+  <style>${CSS}</style>
+</head>
+`;
 }
 
 const CSS = `
@@ -241,6 +305,11 @@ body{background:radial-gradient(circle at 15% 0%,rgba(246,2,188,.28),transparent
 .card:not(.found) .card-name{color:var(--muted);letter-spacing:2px}
 .card-note{font-size:.8rem;color:var(--muted)}
 .help{color:var(--muted);font-size:.9rem;text-align:center}
+.desktop-note{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;padding-top:12vh}
+.desktop-note.show{display:flex}
+.desktop-note p{color:var(--muted);max-width:34ch}
+.desktop-note a{color:var(--cyan)}
+@media (hover:hover) and (pointer:fine){.wrap>:not(.brand):not(.desktop-note){display:none}.desktop-note{display:flex}}
 @media (prefers-reduced-motion:no-preference){.banner{animation:in .45s ease}@keyframes in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}}
 `;
 

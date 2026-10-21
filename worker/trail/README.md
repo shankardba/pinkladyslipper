@@ -11,6 +11,8 @@ A standalone Cloudflare Worker behind "The Trail", the QR scavenger hunt. Each p
 | `GET /admin` | HTTP Basic Auth (any username, password = `ADMIN_PASSWORD`). Lists the spots with printable QR codes, a per-spot count of finders, an add-a-spot form and a Delete button. |
 | `POST /admin/add`, `POST /admin/delete` | Same auth. Rejected with 403 unless `Origin` equals the Worker's own origin. |
 
+Phones only: desktop browsers get a "Phones only" page from `/s/<token>` and `/`, nothing is recorded, and no cookie is set. Detection is best-effort and errs toward letting people in: Chromium client hints (`Sec-CH-UA-Mobile`/`Platform`) and Windows/Linux/ChromeOS user agents are treated as desktop, while a "Macintosh" user agent is left alone because iPadOS Safari reports it. A stylesheet fallback hides the game for any mouse-driven device (`hover: hover` and `pointer: fine`) that slips through. A phone that trips the gate can add `?phone=1` (the page links to it). `/admin` is never gated. To try the game on a laptop, use the browser's device emulation or add `?phone=1`.
+
 The visitor is an anonymous UUID in a first-party `HttpOnly; Secure; SameSite=Lax` cookie set by the Worker, scoped to `/api/trail`. Clearing browser data or switching phones starts a visitor over.
 
 QR tokens are 8 random characters from a no-look-alike alphabet, so nobody can claim spots by guessing URLs. Tokens only appear on the password-protected admin page.
