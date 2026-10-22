@@ -28,7 +28,7 @@
 // Secrets:  ADMIN_PASSWORD (required for /admin), RESEND_API_KEY,
 //           TURNSTILE_SECRET (optional)
 
-import { LOGO_LINE_DATA_URI } from './logo.js';
+import { LOGO_DATA_URI, LOGO_ASPECT, LOGO_INK_RADIUS } from './logo.js';
 import { emailEnabled, sendLinkEmail } from './email.js';
 
 const PREFIX = '/api/trail';
@@ -726,45 +726,100 @@ function adminPage(env, url, spots, visitors) {
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <script>
-    // Each code is drawn at a large whole-number module size, so square edges
-    // stay sharp and the logo's round cut-out is anti-aliased. The <img> shows
-    // it at card size; right-click > Save Image gives the full-resolution PNG.
-    const LOGO_SRC = ${JSON.stringify(LOGO_LINE_DATA_URI)};
+    // Each code is drawn at a large whole-number module size, so edges stay
+    // sharp. The <img> shows it at card size; right-click > Save Image gives
+    // the full-resolution PNG.
+    //
+    // Style: every dark module is a tile with a hairline gap, rounded only
+    // where it has no dark neighbour; the three corners are leaf shapes; the
+    // logo sits in a round clear zone made of whole modules. Error correction
+    // is the highest level so the cleared middle can be recovered.
+    const LOGO_SRC = ${JSON.stringify(LOGO_DATA_URI)};
+    const LOGO_ASPECT = ${LOGO_ASPECT};           // height / width
+    const LOGO_INK_RADIUS = ${LOGO_INK_RADIUS};   // farthest ink from centre, as a share of width
     const baseInput = document.getElementById('base');
-    const QUIET = 4;       // quiet-zone width, in modules
-    const LOGO_FRAC = 0.28; // logo diameter as a share of the whole image
+    const QUIET = 4;        // quiet-zone width, in modules
+    const LOGO_FRAC = 0.26; // logo width as a share of the whole image
+    const MARGIN = 0.7;     // empty margin around the logo, in modules
+    const GAP = 0.05;       // hairline between tiles, as a share of a module
+
+    // r = [top-left, top-right, bottom-right, bottom-left] corner radii
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r[0], y);
+      ctx.lineTo(x + w - r[1], y);
+      if (r[1]) ctx.arcTo(x + w, y, x + w, y + r[1], r[1]); else ctx.lineTo(x + w, y);
+      ctx.lineTo(x + w, y + h - r[2]);
+      if (r[2]) ctx.arcTo(x + w, y + h, x + w - r[2], y + h, r[2]); else ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x + r[3], y + h);
+      if (r[3]) ctx.arcTo(x, y + h, x, y + h - r[3], r[3]); else ctx.lineTo(x, y + h);
+      ctx.lineTo(x, y + r[0]);
+      if (r[0]) ctx.arcTo(x, y, x + r[0], y, r[0]);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     function drawQr(link, logo) {
-      const qr = qrcode(0, 'H'); // highest error correction so the logo can cover the middle
+      const qr = qrcode(0, 'H');
       qr.addData(link);
       qr.make();
       const n = qr.getModuleCount();
-      const mod = Math.ceil(1600 / (n + QUIET * 2));
-      const size = (n + QUIET * 2) * mod;
+      const total = n + QUIET * 2;
+      const mod = Math.ceil(1600 / total);
+      const size = total * mod;
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = size;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
+
+      const mid = n / 2;
+      const logoW = LOGO_FRAC * total;
+      const logoH = logoW * LOGO_ASPECT;
+      const clearR = LOGO_INK_RADIUS * logoW + MARGIN;
+      const inFinder = (r, c) => (r < 8 && c < 8) || (r < 8 && c >= n - 8) || (r >= n - 8 && c < 8);
+      const cleared = (r, c) => {
+        const nx = Math.min(Math.max(mid, c), c + 1);
+        const ny = Math.min(Math.max(mid, r), r + 1);
+        return (nx - mid) * (nx - mid) + (ny - mid) * (ny - mid) < clearR * clearR;
+      };
+      const dark = (r, c) => r >= 0 && c >= 0 && r < n && c < n && qr.isDark(r, c) && !inFinder(r, c) && !cleared(r, c);
+
       ctx.fillStyle = '#000000';
+      const gap = Math.round(GAP * mod);
+      const side = mod - 2 * gap;
+      const rad = side / 2;
       for (let r = 0; r < n; r++) {
         for (let c = 0; c < n; c++) {
-          if (qr.isDark(r, c)) ctx.fillRect((c + QUIET) * mod, (r + QUIET) * mod, mod, mod);
+          if (!dark(r, c)) continue;
+          const up = dark(r - 1, c), down = dark(r + 1, c), left = dark(r, c - 1), right = dark(r, c + 1);
+          roundRect(ctx, (c + QUIET) * mod + gap, (r + QUIET) * mod + gap, side, side, [
+            !up && !left ? rad : 0,
+            !up && !right ? rad : 0,
+            !down && !right ? rad : 0,
+            !down && !left ? rad : 0,
+          ]);
         }
       }
-      const d = Math.round(size * LOGO_FRAC);
-      const pad = Math.round(size * 0.016);
-      const mid = size / 2;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(mid, mid, d / 2 + pad, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(mid, mid, d / 2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(logo, mid - d / 2, mid - d / 2, d, d);
-      ctx.restore();
+
+      // Leaf-shaped corners: two opposite corners rounded, two pointed.
+      [[0, 0, false], [0, n - 7, true], [n - 7, 0, true]].forEach(([r0, c0, flip]) => {
+        const x = (c0 + QUIET) * mod;
+        const y = (r0 + QUIET) * mod;
+        const radii = (k) => (flip ? [0, k, 0, k] : [k, 0, k, 0]);
+        ctx.fillStyle = '#000000';
+        roundRect(ctx, x, y, 7 * mod, 7 * mod, radii(2.8 * mod));
+        ctx.fillStyle = '#ffffff';
+        roundRect(ctx, x + mod, y + mod, 5 * mod, 5 * mod, radii(1.8 * mod));
+        ctx.fillStyle = '#000000';
+        roundRect(ctx, x + 2 * mod, y + 2 * mod, 3 * mod, 3 * mod, radii(1.5 * mod));
+      });
+
+      // Multiply keeps the logo's white background from erasing tiles outside the clear zone.
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.drawImage(logo, (QUIET + mid - logoW / 2) * mod, (QUIET + mid - logoH / 2) * mod, logoW * mod, logoH * mod);
+      ctx.globalCompositeOperation = 'source-over';
+
       const img = new Image();
       img.alt = 'QR code';
       img.src = canvas.toDataURL('image/png');
