@@ -739,7 +739,7 @@ function adminPage(env, url, spots, visitors) {
     const LOGO_INK_RADIUS = ${LOGO_INK_RADIUS};   // farthest ink from centre, as a share of width
     const baseInput = document.getElementById('base');
     const QUIET = 4;        // quiet-zone width, in modules
-    const LOGO_FRAC = 0.26; // logo width as a share of the whole image
+    const LOGO_FRAC = 0.22; // logo width as a share of the whole image
     const MARGIN = 0.7;     // empty margin around the logo, in modules
     const GAP = 0.05;       // hairline between tiles, as a share of a module
 
