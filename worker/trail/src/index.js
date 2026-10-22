@@ -205,12 +205,12 @@ ${head(env)}<body>
         <path d="M30 33 C19 35 8 30 4 20 C15 16 26 21 30 33Z" fill="url(#gSide)" /><path d="M34 33 C45 35 56 30 60 20 C49 16 38 21 34 33Z" fill="url(#gSideR)" />
         <path d="M32 31 C21 25 21 12 32 4 C43 12 43 25 32 31Z" fill="url(#gTop)" />
         <g fill="none" stroke="#ff7ae8" stroke-width="1.1" stroke-linecap="round" opacity=".85"><path d="M32 27 L32 9" /><path d="M28 30 L10 21" /><path d="M36 30 L54 21" /></g>
-        <path d="M32 29 C43 29 48 37 46 45 C44 53 37 58 32 58 C27 58 20 53 18 45 C16 37 21 29 32 29Z" fill="url(#gPouch)" />
-        <ellipse cx="26.5" cy="38" rx="3.4" ry="5" transform="rotate(18 26.5 38)" fill="#fff" opacity=".35" />
+        <path d="M32 27 C39.5 27 42.5 35 40.5 44 C38.5 53 34.5 59 32 61.5 C29.5 59 25.5 53 23.5 44 C21.5 35 24.5 27 32 27Z" fill="url(#gPouch)" />
+        <ellipse cx="28.6" cy="37" rx="2.2" ry="6" transform="rotate(8 28.6 37)" fill="#fff" opacity=".35" />
       </symbol>
       <symbol id="slipper-unfound" viewBox="0 0 64 64">
-        <g fill="none" stroke="#8d7fb0" stroke-width="3.4" stroke-linejoin="round"><path d="M27 49 C18 49 11 53 7 60 C17 61 25 57 27 49Z" /><path d="M37 49 C46 49 53 53 57 60 C47 61 39 57 37 49Z" /><path d="M32 31 C21 25 21 12 32 4 C43 12 43 25 32 31Z" /><path d="M30 33 C19 35 8 30 4 20 C15 16 26 21 30 33Z" /><path d="M34 33 C45 35 56 30 60 20 C49 16 38 21 34 33Z" /><path d="M32 29 C43 29 48 37 46 45 C44 53 37 58 32 58 C27 58 20 53 18 45 C16 37 21 29 32 29Z" /></g>
-        <g fill="#1c1533"><path d="M27 49 C18 49 11 53 7 60 C17 61 25 57 27 49Z" /><path d="M37 49 C46 49 53 53 57 60 C47 61 39 57 37 49Z" /><path d="M32 31 C21 25 21 12 32 4 C43 12 43 25 32 31Z" /><path d="M30 33 C19 35 8 30 4 20 C15 16 26 21 30 33Z" /><path d="M34 33 C45 35 56 30 60 20 C49 16 38 21 34 33Z" /><path d="M32 29 C43 29 48 37 46 45 C44 53 37 58 32 58 C27 58 20 53 18 45 C16 37 21 29 32 29Z" /></g>
+        <g fill="none" stroke="#8d7fb0" stroke-width="3.4" stroke-linejoin="round"><path d="M27 49 C18 49 11 53 7 60 C17 61 25 57 27 49Z" /><path d="M37 49 C46 49 53 53 57 60 C47 61 39 57 37 49Z" /><path d="M32 31 C21 25 21 12 32 4 C43 12 43 25 32 31Z" /><path d="M30 33 C19 35 8 30 4 20 C15 16 26 21 30 33Z" /><path d="M34 33 C45 35 56 30 60 20 C49 16 38 21 34 33Z" /><path d="M32 27 C39.5 27 42.5 35 40.5 44 C38.5 53 34.5 59 32 61.5 C29.5 59 25.5 53 23.5 44 C21.5 35 24.5 27 32 27Z" /></g>
+        <g fill="#1c1533"><path d="M27 49 C18 49 11 53 7 60 C17 61 25 57 27 49Z" /><path d="M37 49 C46 49 53 53 57 60 C47 61 39 57 37 49Z" /><path d="M32 31 C21 25 21 12 32 4 C43 12 43 25 32 31Z" /><path d="M30 33 C19 35 8 30 4 20 C15 16 26 21 30 33Z" /><path d="M34 33 C45 35 56 30 60 20 C49 16 38 21 34 33Z" /><path d="M32 27 C39.5 27 42.5 35 40.5 44 C38.5 53 34.5 59 32 61.5 C29.5 59 25.5 53 23.5 44 C21.5 35 24.5 27 32 27Z" /></g>
       </symbol>
     </defs>
   </svg>
