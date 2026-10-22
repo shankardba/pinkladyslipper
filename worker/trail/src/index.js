@@ -194,18 +194,23 @@ function page(env, { found, total, banner, recoveryHtml }) {
 ${head(env)}<body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
-      <linearGradient id="pouch" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#f602bc" /><stop offset="1" stop-color="#b0128f" />
-      </linearGradient>
-      <symbol id="slipper-found" viewBox="0 0 48 48">
-        <path d="M12 30C10 20 16 12 24 12s14 8 12 18c-2 8-22 8-24 0Z" fill="url(#pouch)" stroke="#02d565" stroke-width="2" stroke-linejoin="round" />
-        <path d="M24 12C21 8 15 6 9 8M24 12c3-4 9-6 15-4" fill="none" stroke="#b0128f" stroke-width="2" stroke-linecap="round" />
-        <path d="M18 30C16 22 8 26 6 34" fill="none" stroke="#02d565" stroke-width="1.6" stroke-linecap="round" opacity=".7" />
+      <linearGradient id="gTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a4bff" /><stop offset="1" stop-color="#3d2bff" /></linearGradient>
+      <linearGradient id="gSide" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b3dff" /><stop offset="1" stop-color="#7b2ffc" /></linearGradient>
+      <linearGradient id="gSideR" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b3dff" /><stop offset="1" stop-color="#7b2ffc" /></linearGradient>
+      <radialGradient id="gPouch" cx=".4" cy=".32" r=".75"><stop offset="0" stop-color="#ff6fe0" /><stop offset=".55" stop-color="#f602bc" /><stop offset="1" stop-color="#a50f86" /></radialGradient>
+      <linearGradient id="gLeaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5dffa6" /><stop offset="1" stop-color="#02b457" /></linearGradient>
+      <linearGradient id="gLeafR" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5dffa6" /><stop offset="1" stop-color="#02b457" /></linearGradient>
+      <symbol id="slipper-found" viewBox="0 0 64 64">
+        <path d="M27 49 C18 49 11 53 7 60 C17 61 25 57 27 49Z" fill="url(#gLeaf)" /><path d="M37 49 C46 49 53 53 57 60 C47 61 39 57 37 49Z" fill="url(#gLeafR)" />
+        <path d="M30 33 C19 35 8 30 4 20 C15 16 26 21 30 33Z" fill="url(#gSide)" /><path d="M34 33 C45 35 56 30 60 20 C49 16 38 21 34 33Z" fill="url(#gSideR)" />
+        <path d="M32 31 C21 25 21 12 32 4 C43 12 43 25 32 31Z" fill="url(#gTop)" />
+        <g fill="none" stroke="#ff7ae8" stroke-width="1.1" stroke-linecap="round" opacity=".85"><path d="M32 27 L32 9" /><path d="M28 30 L10 21" /><path d="M36 30 L54 21" /></g>
+        <path d="M32 29 C43 29 48 37 46 45 C44 53 37 58 32 58 C27 58 20 53 18 45 C16 37 21 29 32 29Z" fill="url(#gPouch)" />
+        <ellipse cx="26.5" cy="38" rx="3.4" ry="5" transform="rotate(18 26.5 38)" fill="#fff" opacity=".35" />
       </symbol>
-      <symbol id="slipper-unfound" viewBox="0 0 48 48">
-        <path d="M12 30C10 20 16 12 24 12s14 8 12 18c-2 8-22 8-24 0Z" fill="none" stroke="#b8a8d6" stroke-width="2" stroke-linejoin="round" />
-        <path d="M24 12C21 8 15 6 9 8M24 12c3-4 9-6 15-4" fill="none" stroke="#b8a8d6" stroke-width="2" stroke-linecap="round" />
-        <path d="M18 30C16 22 8 26 6 34" fill="none" stroke="#b8a8d6" stroke-width="1.6" stroke-linecap="round" opacity=".7" />
+      <symbol id="slipper-unfound" viewBox="0 0 64 64">
+        <g fill="none" stroke="#8d7fb0" stroke-width="3.4" stroke-linejoin="round"><path d="M27 49 C18 49 11 53 7 60 C17 61 25 57 27 49Z" /><path d="M37 49 C46 49 53 53 57 60 C47 61 39 57 37 49Z" /><path d="M32 31 C21 25 21 12 32 4 C43 12 43 25 32 31Z" /><path d="M30 33 C19 35 8 30 4 20 C15 16 26 21 30 33Z" /><path d="M34 33 C45 35 56 30 60 20 C49 16 38 21 34 33Z" /><path d="M32 29 C43 29 48 37 46 45 C44 53 37 58 32 58 C27 58 20 53 18 45 C16 37 21 29 32 29Z" /></g>
+        <g fill="#1c1533"><path d="M27 49 C18 49 11 53 7 60 C17 61 25 57 27 49Z" /><path d="M37 49 C46 49 53 53 57 60 C47 61 39 57 37 49Z" /><path d="M32 31 C21 25 21 12 32 4 C43 12 43 25 32 31Z" /><path d="M30 33 C19 35 8 30 4 20 C15 16 26 21 30 33Z" /><path d="M34 33 C45 35 56 30 60 20 C49 16 38 21 34 33Z" /><path d="M32 29 C43 29 48 37 46 45 C44 53 37 58 32 58 C27 58 20 53 18 45 C16 37 21 29 32 29Z" /></g>
       </symbol>
     </defs>
   </svg>
@@ -330,7 +335,7 @@ body{background:radial-gradient(circle at 15% 0%,rgba(246,2,188,.28),transparent
 .grid{list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .card{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:16px 10px;border-radius:12px;background:var(--bg-alt);border:1px solid rgba(2,211,255,.12)}
 .card.found{border-color:rgba(2,213,101,.35);box-shadow:0 0 18px rgba(2,213,101,.12)}
-.icon{width:36px;height:36px}
+.icon{width:52px;height:52px}
 .card-name{font-family:'Poppins',sans-serif;font-weight:600;font-size:.95rem}
 .card:not(.found) .card-name{color:var(--muted);letter-spacing:2px}
 .card-note{font-size:.8rem;color:var(--muted)}
