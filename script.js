@@ -29,12 +29,14 @@ document.addEventListener('keydown', (event) => {
 });
 
 // Tour dates from the band's public Google Calendar, via the shows Worker.
-// Hosts without a backend (including PROD, for now) keep the hardcoded list.
+// PROD uses the same-origin route; other hosts keep the hardcoded list.
 const TEST_SHOWS_ENDPOINT = 'https://pls-shows-test.baseball4537.workers.dev/api/shows';
 const showsEndpoint = {
   localhost: TEST_SHOWS_ENDPOINT,
   '127.0.0.1': TEST_SHOWS_ENDPOINT,
   'shankardba.github.io': TEST_SHOWS_ENDPOINT,
+  'pinkladyslipper.net': '/api/shows',
+  'www.pinkladyslipper.net': '/api/shows',
 }[location.hostname];
 
 const tourList = document.getElementById('tourList');

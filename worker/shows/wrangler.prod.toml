@@ -1,0 +1,28 @@
+# PROD tour-dates Worker on the band's Cloudflare account. Routed at
+# pinkladyslipper.net/api/shows* (same origin as the site), no workers.dev.
+# Reads the band's public calendar ("PLS Shows").
+#
+# Deploy from this folder only:
+#   export CLOUDFLARE_API_TOKEN=$(cat ~/.config/cloudflare-pls-prod/token)
+#   export CLOUDFLARE_ACCOUNT_ID=feaccfb4bfda7d10bd645e2d95928d51
+#   npx wrangler deploy --config wrangler.prod.toml
+
+name = "pls-shows"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+routes = [
+  { pattern = "pinkladyslipper.net/api/shows*", zone_name = "pinkladyslipper.net" },
+  { pattern = "www.pinkladyslipper.net/api/shows*", zone_name = "pinkladyslipper.net" },
+]
+
+kv_namespaces = [
+  { binding = "SHOWS", id = "41b6b951293f4175ba40b1e217bc9f2b" },
+]
+
+[vars]
+ICS_URL = "https://calendar.google.com/calendar/ical/eb9bb4cafc69d40b5895f77e21aac03ea1bde75fe6fcccd5bedcb4fe10537de7%40group.calendar.google.com/public/basic.ics"
+ALLOWED_ORIGINS = "https://pinkladyslipper.net,https://www.pinkladyslipper.net"
+TIME_ZONE = "America/New_York"
+CACHE_SECONDS = "600"
