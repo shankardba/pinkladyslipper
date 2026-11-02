@@ -28,6 +28,67 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+// Tour dates from the band's public Google Calendar, via the shows Worker.
+// Hosts without a backend (including PROD, for now) keep the hardcoded list.
+const TEST_SHOWS_ENDPOINT = 'https://pls-shows-test.baseball4537.workers.dev/api/shows';
+const showsEndpoint = {
+  localhost: TEST_SHOWS_ENDPOINT,
+  '127.0.0.1': TEST_SHOWS_ENDPOINT,
+  'shankardba.github.io': TEST_SHOWS_ENDPOINT,
+}[location.hostname];
+
+const tourList = document.getElementById('tourList');
+
+if (tourList && showsEndpoint) {
+  const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  };
+  const safeUrl = (url) => /^https?:\/\//i.test(url || '') ? url : null;
+
+  const renderShow = (show) => {
+    const [y, m, d] = show.date.split('-');
+    const li = el('li', 'tour-date');
+
+    const date = el('span', 'date', `${MONTHS[+m - 1]} ${d}, ${y}`);
+    if (show.time) date.append(el('span', 'time', show.time));
+    li.append(date);
+
+    const venue = el('span', 'venue');
+    const mapUrl = safeUrl(show.mapUrl);
+    const name = mapUrl ? el('a', 'venue-name', show.title) : el('span', 'venue-name', show.title);
+    if (mapUrl) { name.href = mapUrl; name.target = '_blank'; name.rel = 'noopener'; }
+    venue.append(name);
+    if (show.city) venue.append(` — ${show.city}`);
+    if (show.note) venue.append(el('span', 'note', show.note));
+    li.append(venue);
+
+    const ticketUrl = safeUrl(show.ticketUrl);
+    if (show.status === 'cancelled') li.append(el('span', 'tour-status', 'Cancelled'));
+    else if (show.status === 'soldout') li.append(el('span', 'tour-status', 'Sold out'));
+    else if (ticketUrl) {
+      const btn = el('a', 'btn btn-small', 'Tickets');
+      btn.href = ticketUrl; btn.target = '_blank'; btn.rel = 'noopener';
+      li.append(btn);
+    }
+    if (show.status === 'cancelled') li.classList.add('is-cancelled');
+    return li;
+  };
+
+  fetch(showsEndpoint)
+    .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+    .then(({ shows }) => {
+      tourList.replaceChildren(...(shows.length
+        ? shows.map(renderShow)
+        : [el('li', 'tour-empty', 'No upcoming shows announced yet. Check back soon.')]));
+      document.getElementById('tourCalendar').hidden = false;
+    })
+    .catch(() => { /* keep the hardcoded list */ });
+}
+
 // Footer year
 document.getElementById('year').textContent = new Date().getFullYear();
 

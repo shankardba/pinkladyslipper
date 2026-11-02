@@ -1,0 +1,23 @@
+# Test tour-dates Worker on the band's Cloudflare account, workers.dev only
+# (no route on pinkladyslipper.net). Used by DEV (GitHub Pages) and localhost.
+# Reads the band's real public calendar ("PLS Shows").
+#
+# Deploy from this folder only:
+#   export CLOUDFLARE_API_TOKEN=$(cat ~/.config/cloudflare-pls-prod/token)
+#   export CLOUDFLARE_ACCOUNT_ID=feaccfb4bfda7d10bd645e2d95928d51
+#   npx wrangler deploy --config wrangler.test.toml
+
+name = "pls-shows-test"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+kv_namespaces = [
+  { binding = "SHOWS", id = "2da14f8f02a94fc9a610aa88bdcd3dcf" },
+]
+
+[vars]
+ICS_URL = "https://calendar.google.com/calendar/ical/eb9bb4cafc69d40b5895f77e21aac03ea1bde75fe6fcccd5bedcb4fe10537de7%40group.calendar.google.com/public/basic.ics"
+ALLOWED_ORIGINS = "https://shankardba.github.io,http://localhost:8997,http://127.0.0.1:8997"
+TIME_ZONE = "America/New_York"
+CACHE_SECONDS = "600"
