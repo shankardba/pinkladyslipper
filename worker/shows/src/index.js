@@ -90,6 +90,8 @@ function toShow(e, tz) {
   if ((e.STATUS && e.STATUS.value || '').toUpperCase() === 'CANCELLED') return null;
 
   let title = unescapeText(e.SUMMARY.value).trim();
+  // A calendar shared as "free/busy only" publishes every event as a bare "Busy".
+  if (title === 'Busy' && !e.LOCATION && !e.DESCRIPTION) return null;
   let status = null;
   const prefix = title.match(/^(cancell?ed|sold[\s-]*out)\b[\s:\-–—]*/i);
   if (prefix) {
