@@ -84,7 +84,6 @@ if (tourList && showsEndpoint) {
       tourList.replaceChildren(...(shows.length
         ? shows.map(renderShow)
         : [el('li', 'tour-empty', 'No upcoming shows announced yet. Check back soon.')]));
-      document.getElementById('tourCalendar').hidden = false;
     })
     .catch(() => { /* keep the hardcoded list */ });
 }

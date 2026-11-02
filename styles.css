@@ -487,19 +487,6 @@ a {
   text-align: center;
 }
 
-.tour-calendar {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 0.9rem;
-}
-
-.tour-calendar[hidden] {
-  display: none;
-}
-
-.tour-calendar a {
-  color: var(--color-secondary);
-}
 
 /* Media */
 .media-grid {
