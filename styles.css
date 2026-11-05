@@ -773,8 +773,11 @@ a {
     background: rgba(255, 255, 255, 0.45);
   }
 
-  .show-sheet .show-poster img {
-    max-height: 62vh;
+  /* Leave room for the date and title to peek in below the poster. */
+  .show-sheet .show-poster img,
+  .show-sheet.is-tall .show-poster img,
+  .show-sheet.is-square .show-poster img {
+    max-height: 58vh;
   }
 
   .show-sheet.is-wide .show-poster img {
