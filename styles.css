@@ -716,6 +716,18 @@ a {
 
 .show-actions .btn {
   padding: 12px 22px;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.show-actions button.btn {
+  background: transparent;
+  cursor: pointer;
+}
+
+.show-actions button.btn-outline:hover {
+  background: var(--color-secondary);
 }
 
 @keyframes show-fade {
