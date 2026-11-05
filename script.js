@@ -50,44 +50,210 @@ if (tourList && showsEndpoint) {
     return node;
   };
   const safeUrl = (url) => /^https?:\/\//i.test(url || '') ? url : null;
+  const extLink = (className, text, href) => {
+    const a = el('a', className, text);
+    a.href = href; a.target = '_blank'; a.rel = 'noopener';
+    return a;
+  };
+  const longDate = (show) => {
+    const [y, m, d] = show.date.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  };
+  const statusLabel = (show) => ({ cancelled: 'Cancelled', soldout: 'Sold out' })[show.status];
 
+  // ----- Pop-up -----
+  const dialog = document.getElementById('showDialog');
+  const sheet = document.getElementById('showSheet');
+  const showsById = new Map();
+  let lastFocus = null;
+
+  const fillDialog = (show) => {
+    const poster = document.getElementById('showPoster');
+    poster.replaceChildren();
+    poster.style.removeProperty('--poster');
+    setShape(null);
+    if (show.image) {
+      const img = el('img');
+      img.alt = `Poster: ${show.title}, ${longDate(show)}`;
+      img.addEventListener('load', () => setShape(img));
+      img.addEventListener('error', () => { setShape(null); poster.replaceChildren(fallbackHeader(show)); });
+      img.src = show.image;
+      poster.style.setProperty('--poster', `url("${show.image}")`);
+      poster.append(img);
+      if (img.complete && img.naturalWidth) setShape(img);
+    } else {
+      poster.append(fallbackHeader(show));
+    }
+
+    document.getElementById('showDate').textContent = longDate(show) + (show.time ? ` · ${show.time}` : '');
+    document.getElementById('showTitle').textContent = show.title;
+    const address = document.getElementById('showAddress');
+    address.textContent = show.address || show.city || '';
+    address.hidden = !address.textContent;
+    const details = document.getElementById('showDetails');
+    details.textContent = show.details || '';
+    details.hidden = !show.details;
+
+    const actions = document.getElementById('showActions');
+    actions.replaceChildren();
+    const ticketUrl = safeUrl(show.ticketUrl);
+    if (statusLabel(show)) actions.append(el('span', 'tour-status', statusLabel(show)));
+    else if (ticketUrl) actions.append(extLink('btn btn-primary', 'Tickets', ticketUrl));
+    const mapUrl = safeUrl(show.mapUrl);
+    if (mapUrl) actions.append(extLink('btn btn-outline', 'Directions', mapUrl));
+    const share = el('button', 'btn btn-outline show-share', 'Share');
+    share.type = 'button';
+    share.addEventListener('click', () => shareShow(show, share));
+    actions.append(share);
+    sheet.classList.toggle('is-cancelled', show.status === 'cancelled');
+  };
+
+  // Lay the pop-up out to suit the poster's shape: tall and square posters sit
+  // beside the details on wide screens; wide ones go across the top. Phones
+  // always stack. --ar (width / height) sizes the poster column exactly.
+  const setShape = (img) => {
+    sheet.classList.remove('is-tall', 'is-square', 'is-wide', 'no-image');
+    if (!img) { sheet.classList.add('no-image'); sheet.style.removeProperty('--ar'); return; }
+    const ar = img.naturalWidth / img.naturalHeight;
+    sheet.style.setProperty('--ar', ar.toFixed(4));
+    sheet.classList.add(ar < 0.85 ? 'is-tall' : ar <= 1.2 ? 'is-square' : 'is-wide');
+  };
+
+  // Load posters ahead of time so the pop-up opens at the right size.
+  const preload = (url) => {
+    const img = new Image();
+    img.src = url;
+    return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+  };
+
+  const fallbackHeader = (show) => {
+    const [, m, d] = show.date.split('-');
+    const box = el('div', 'show-poster-fallback');
+    box.append(el('span', 'month', MONTHS[+m - 1]), el('span', 'day', String(+d)));
+    return box;
+  };
+
+  const shareShow = async (show, button) => {
+    const url = `${location.origin}${location.pathname}#show-${show.id}`;
+    const text = `Pink Lady Slipper at ${show.title}, ${longDate(show)}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Pink Lady Slipper', text, url }); } catch { /* cancelled */ }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      button.textContent = 'Link copied';
+      setTimeout(() => { button.textContent = 'Share'; }, 2000);
+    } catch { prompt('Copy this link:', url); }
+  };
+
+  const openShow = async (show, { fromHash = false } = {}) => {
+    if (!dialog || !show || dialog.open) return;
+    lastFocus = document.activeElement;
+    // Wait briefly for the poster so the layout doesn't jump after opening.
+    if (show.image) await Promise.race([preload(show.image), new Promise((r) => setTimeout(r, 400))]);
+    fillDialog(show);
+    if (!fromHash) history.replaceState(null, '', `#show-${show.id}`);
+    document.body.style.overflow = 'hidden';
+    dialog.showModal();
+    sheet.scrollTop = 0;
+  };
+
+  const closeShow = () => {
+    if (!dialog.open) return;
+    sheet.classList.add('is-closing');
+    setTimeout(() => {
+      sheet.classList.remove('is-closing');
+      sheet.style.transform = '';
+      dialog.close();
+    }, 180);
+  };
+
+  if (dialog) {
+    dialog.addEventListener('close', () => {
+      document.body.style.overflow = '';
+      if (location.hash.startsWith('#show-')) history.replaceState(null, '', '#tour');
+      if (lastFocus) lastFocus.focus();
+    });
+    dialog.addEventListener('cancel', (event) => { event.preventDefault(); closeShow(); });
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) closeShow(); });
+    document.getElementById('showClose').addEventListener('click', closeShow);
+
+    // Swipe down to close on phones.
+    let startY = null;
+    sheet.addEventListener('touchstart', (e) => { startY = sheet.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
+    sheet.addEventListener('touchmove', (e) => {
+      if (startY === null) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 0) sheet.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    sheet.addEventListener('touchend', (e) => {
+      if (startY === null) return;
+      const dy = e.changedTouches[0].clientY - startY;
+      startY = null;
+      if (dy > 110) closeShow();
+      else sheet.style.transform = '';
+    });
+  }
+
+  // ----- List -----
   const renderShow = (show) => {
     const [y, m, d] = show.date.split('-');
-    const li = el('li', 'tour-date');
+    const li = el('li', 'tour-date has-details');
+    li.tabIndex = 0;
+    li.setAttribute('role', 'button');
+    li.setAttribute('aria-haspopup', 'dialog');
+    li.setAttribute('aria-label', `${show.title}, ${longDate(show)}. Show details`);
+
+    if (show.image) {
+      const thumb = el('img', 'tour-thumb');
+      thumb.src = show.image; thumb.alt = ''; thumb.loading = 'lazy';
+      thumb.addEventListener('error', () => thumb.remove());
+      li.append(thumb);
+    }
 
     const date = el('span', 'date', `${MONTHS[+m - 1]} ${d}, ${y}`);
     if (show.time) date.append(el('span', 'time', show.time));
     li.append(date);
 
     const venue = el('span', 'venue');
-    const mapUrl = safeUrl(show.mapUrl);
-    const name = mapUrl ? el('a', 'venue-name', show.title) : el('span', 'venue-name', show.title);
-    if (mapUrl) { name.href = mapUrl; name.target = '_blank'; name.rel = 'noopener'; }
-    venue.append(name);
+    venue.append(el('span', 'venue-name', show.title));
     if (show.city) venue.append(` — ${show.city}`);
     if (show.note) venue.append(el('span', 'note', show.note));
     li.append(venue);
 
     const ticketUrl = safeUrl(show.ticketUrl);
-    if (show.status === 'cancelled') li.append(el('span', 'tour-status', 'Cancelled'));
-    else if (show.status === 'soldout') li.append(el('span', 'tour-status', 'Sold out'));
-    else if (ticketUrl) {
-      const btn = el('a', 'btn btn-small', 'Tickets');
-      btn.href = ticketUrl; btn.target = '_blank'; btn.rel = 'noopener';
-      li.append(btn);
-    }
+    if (statusLabel(show)) li.append(el('span', 'tour-status', statusLabel(show)));
+    else if (ticketUrl) li.append(extLink('btn btn-small', 'Tickets', ticketUrl));
+    li.append(el('span', 'tour-more', 'Details'));
     if (show.status === 'cancelled') li.classList.add('is-cancelled');
+
+    li.addEventListener('click', (event) => { if (!event.target.closest('a')) openShow(show); });
+    li.addEventListener('keydown', (event) => {
+      if (event.target === li && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openShow(show); }
+    });
     return li;
+  };
+
+  const openFromHash = () => {
+    const m = location.hash.match(/^#show-(.+)$/);
+    if (m && showsById.has(m[1])) openShow(showsById.get(m[1]), { fromHash: true });
   };
 
   fetch(showsEndpoint)
     .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
     .then(({ shows }) => {
+      shows.forEach((show) => {
+        if (show.id) showsById.set(show.id, show);
+        if (show.image) preload(show.image);
+      });
       tourList.replaceChildren(...(shows.length
         ? shows.map(renderShow)
         : [el('li', 'tour-empty', 'No upcoming shows announced yet. Check back soon.')]));
+      openFromHash();
     })
     .catch(() => { /* keep the hardcoded list */ });
+  window.addEventListener('hashchange', openFromHash);
 }
 
 // Footer year

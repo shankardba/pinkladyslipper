@@ -111,6 +111,21 @@
     </div>
   </section>
 
+  <!-- SHOW POP-UP (filled in by script.js from the calendar) -->
+  <dialog class="show-dialog" id="showDialog" aria-labelledby="showTitle">
+    <article class="show-sheet" id="showSheet">
+      <button class="show-close" id="showClose" type="button" aria-label="Close">&times;</button>
+      <div class="show-poster" id="showPoster"></div>
+      <div class="show-body">
+        <p class="show-date" id="showDate"></p>
+        <h3 class="show-title" id="showTitle"></h3>
+        <p class="show-address" id="showAddress"></p>
+        <p class="show-details" id="showDetails"></p>
+        <div class="show-actions" id="showActions"></div>
+      </div>
+    </article>
+  </dialog>
+
   <!-- CONTACT -->
   <section id="contact" class="section contact-section">
     <div class="container contact-container">
